@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Browser Utils",
+  "version": "1.0.0",
+  "description": "自用浏览器工具集合",
+  "permissions": ["contextMenus", "clipboardWrite"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

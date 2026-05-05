@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Browser Utils",
+  "version": "1.0.0",
+  "description": "自用浏览器工具集合",
+  "permissions": ["contextMenus", "clipboardWrite"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "browser-utils@local",
+      "strict_min_version": "109.0"
+    }
+  }
+}
