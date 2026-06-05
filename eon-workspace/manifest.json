@@ -1,0 +1,63 @@
+{
+  "manifest_version": 3,
+  "name": "Eon Workspace",
+  "version": "0.3.1",
+  "description": "Window Manager: Name windows, switch windows, move tabs between windows.",
+  "icons": {
+    "16": "icon.svg",
+    "32": "icon.svg",
+    "48": "icon.svg"
+  },
+  "permissions": [
+    "tabs",
+    "windows",
+    "storage",
+    "contextMenus"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "action": {
+    "default_title": "Eon Workspace",
+    "default_popup": "popup.html",
+    "default_area": "tabstrip",
+    "default_icon": {
+      "16": "icon.svg",
+      "32": "icon.svg",
+      "48": "icon.svg"
+    }
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "F1"
+      },
+      "description": "Open Eon Workspace popup"
+    },
+    "switch-next": {
+      "suggested_key": {
+        "default": "Alt+Q"
+      },
+      "description": "Switch to next window"
+    },
+    "switch-previous": {
+      "suggested_key": {
+        "default": "Shift+Alt+Q"
+      },
+      "description": "Switch to previous window"
+    },
+    "send-tab": {
+      "suggested_key": {
+        "default": "Alt+T",
+        "mac": "Alt+T"
+      },
+      "description": "Send tab to window (/send)"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "eon-workspace@illidan127.v4",
+      "strict_min_version": "109.0"
+    }
+  }
+}

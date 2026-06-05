@@ -1,0 +1,175 @@
+:root {
+  --bg: #fff;
+  --bg-hover: #f0f0f0;
+  --bg-current: #e3f2fd;
+  --text: #333;
+  --text-secondary: #888;
+  --border: #ddd;
+  --accent: #1a73e8;
+  --accent-hover: #1557b0;
+  --danger: #d93025;
+  --popup-width: 320px;
+  --row-height: 40px;
+  --input-height: 36px;
+  --radius: 6px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: var(--popup-width);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+#search {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 1;
+}
+
+#searchInput {
+  width: 100%;
+  height: var(--input-height);
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+#searchInput:focus {
+  border-color: var(--accent);
+}
+
+#searchInput.slashCommand {
+  border-color: var(--accent);
+  background: #f8fbff;
+}
+
+#searchInput.error {
+  border-color: var(--danger);
+}
+
+#windowList {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.window-row {
+  display: flex;
+  align-items: center;
+  height: var(--row-height);
+  padding: 0 8px;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: background 0.1s;
+}
+
+.window-row:hover {
+  background: var(--bg-hover);
+}
+
+.window-row.current {
+  background: var(--bg-current);
+}
+
+.window-row.selected {
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.window-row.filtered {
+  display: none;
+}
+
+.window-row.minimized .window-name,
+.window-row.minimized .tab-count {
+  opacity: 0.5;
+}
+
+.window-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.window-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.window-name.edit {
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.nameless {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.tab-count {
+  margin: 0 8px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.command-row .command-icon {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.command-row .window-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+#footer {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+#newWindowBtn {
+  width: 100%;
+  height: 32px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+#newWindowBtn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.empty-state {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
