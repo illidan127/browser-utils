@@ -1,6 +1,6 @@
 const ext = globalThis.browser ?? globalThis.chrome;
 
-const MENU_ID = "browser-utils-copy-anchor-text";
+const MENU_ID = "copy-link-text";
 
 async function ensureContextMenu() {
   await ext.contextMenus.removeAll();
@@ -25,12 +25,12 @@ ext.contextMenus.onClicked.addListener((info, tab) => {
   const text = typeof info.linkText === "string" ? info.linkText : undefined;
   ext.tabs.sendMessage(
     tabId,
-    { type: "browser-utils-copy-anchor-text", text },
+    { type: "copy-link-text", text },
     typeof info.frameId === "number" ? { frameId: info.frameId } : undefined,
     () => {
       const err = ext.runtime.lastError;
       if (err) {
-        console.error("browser-utils: copy sendMessage failed", err.message);
+        console.error("copy-link-text: copy sendMessage failed", err.message);
       }
     }
   );

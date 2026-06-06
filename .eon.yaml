@@ -1,0 +1,23 @@
+# eon-workspace 配置文件
+# ignore-patterns: 列表中的每项作为 -E 参数传给 fd，用于
+# 过滤 eon-workspace-find-file 的候选文件。
+
+ignore-patterns:
+  - ".git"
+  - ".agent-shell"
+
+# action: 可自由配置的操作命令。每个子 key 对应一个 shell 命令。
+# default: 指定默认执行的 action 名称（可选），通过 `M-x eon-workspace-action-default' 执行。
+# 执行时以 workspace 根目录作为工作目录。
+# 支持 YAML 块字符串格式（| 或 >）。
+# 通过 `M-x eon-workspace-action' 或 `M-x eon-workspace-action-<name>' 执行。
+action:
+  copy-link-text:
+    - exec: |
+        set -euo pipefail
+        plugin_dir=copy-link-text
+        dist_dir=$plugin_dir/dist
+        mkdir -p "$dist_dir"
+        rm -f "$dist_dir/browser-utils-firefox.zip"
+        (cd "$plugin_dir" && zip -j dist/browser-utils-firefox.zip manifest.json background.js content.js)
+        echo "已打包: $dist_dir/browser-utils-firefox.zip"

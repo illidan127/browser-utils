@@ -37,7 +37,7 @@
   }
 
   ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg?.type !== "browser-utils-copy-anchor-text") return undefined;
+    if (msg?.type !== "copy-link-text") return undefined;
     const text = typeof msg.text === "string" ? msg.text : lastContextLinkText;
     copyText(text)
       .then((ok) => sendResponse({ ok }))

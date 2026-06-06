@@ -56,7 +56,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "eon-workspace@illidan127.v4",
+      "id": "eon-workspace@illidan127",
       "strict_min_version": "109.0"
     }
   }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Browser Utils",
+  "name": "copy-link-text",
   "version": "1.0.0",
-  "description": "自用浏览器工具集合",
+  "description": "在链接右键菜单中复制链接的可见文本",
   "permissions": ["contextMenus", "clipboardWrite"],
   "background": {
     "scripts": ["background.js"]
@@ -17,7 +17,7 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "browser-utils@local",
+      "id": "copy-link-text@illidan127",
       "strict_min_version": "109.0",
       "data_collection_permissions": {
         "required": ["none"]
