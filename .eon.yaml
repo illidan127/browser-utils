@@ -21,3 +21,13 @@ action:
         rm -f "$dist_dir/browser-utils-firefox.zip"
         (cd "$plugin_dir" && zip -j dist/browser-utils-firefox.zip manifest.json background.js content.js)
         echo "已打包: $dist_dir/browser-utils-firefox.zip"
+  eon-workspace:
+    - exec: |
+        set -euo pipefail
+        plugin_dir=eon-workspace
+        dist_dir=$plugin_dir/dist
+        mkdir -p "$dist_dir"
+        rm -f "$dist_dir/eon-workspace-firefox.zip"
+        (cd "$plugin_dir" && zip -j dist/eon-workspace-firefox.zip \
+          manifest.json background.js popup.html popup.js popup.css icon.svg)
+        echo "已打包: $dist_dir/eon-workspace-firefox.zip"

@@ -5,6 +5,7 @@ const ext = globalThis.browser ?? globalThis.chrome;
 const WINNAME_PREFIX = "eon_winname_";
 const POPUP_INIT_KEY = "eon_popup_init";
 const LABEL_TAB_SUFFIX = "/label.html";
+const HOLD_TAB_SUFFIX = "/hold.html";
 const MAX_TAB_LABEL_CHARS = 6;
 const ACTION_BADGE_COLOR = "#0060df";
 
@@ -15,6 +16,13 @@ let initPromise = null;
 let isResetting = false;
 let isInitializing = false;
 
+/** 内存缓存：避免 keeper 逻辑里 await storage */
+const namedWindowIds = new Set();
+const keeperTabByWindow = new Map();
+const KEEPER_TAB_URL = "about:blank";
+const syncPendingWindowIds = new Set();
+let syncFlushScheduled = false;
+
 async function getWindowName(windowId) {
     const key = WINNAME_PREFIX + windowId;
     const result = await ext.storage.local.get(key);
@@ -24,11 +32,151 @@ async function getWindowName(windowId) {
 async function setWindowName(windowId, name) {
     const key = WINNAME_PREFIX + windowId;
     await ext.storage.local.set({ [key]: name });
+    syncNamedWindowCache(windowId, name);
+    if (name.trim()) {
+        scheduleNamedWindowSync(windowId);
+    } else {
+        await removeKeeperTab(windowId);
+    }
 }
 
 async function removeWindowName(windowId) {
     const key = WINNAME_PREFIX + windowId;
     await ext.storage.local.remove(key);
+    namedWindowIds.delete(windowId);
+}
+
+function syncNamedWindowCache(windowId, name) {
+    const wid = normalizeWindowId(windowId);
+    if (!wid) return;
+    if (name.trim()) {
+        namedWindowIds.add(wid);
+    } else {
+        namedWindowIds.delete(wid);
+    }
+}
+
+async function refreshNamedWindowCache() {
+    namedWindowIds.clear();
+    const names = await getAllWindowNames();
+    for (const [id, name] of Object.entries(names)) {
+        if (name.trim()) {
+            namedWindowIds.add(Number(id));
+        }
+    }
+}
+
+function findKeeperTab(tabs, windowId) {
+    const wid = normalizeWindowId(windowId);
+    if (!wid) return null;
+    const trackedId = keeperTabByWindow.get(wid);
+    if (!trackedId) return null;
+    const tracked = tabs.find((tab) => tab.id === trackedId);
+    if (tracked) return tracked;
+    keeperTabByWindow.delete(wid);
+    return null;
+}
+
+async function createPinnedKeeperTab(windowId) {
+    const wid = normalizeWindowId(windowId);
+    const created = await ext.tabs.create({
+        windowId: wid,
+        index: 0,
+        pinned: true,
+        active: false,
+        url: KEEPER_TAB_URL,
+    });
+    keeperTabByWindow.set(wid, created.id);
+    return created;
+}
+
+async function removeKeeperTab(windowId) {
+    const wid = normalizeWindowId(windowId);
+    if (!wid) return;
+    const tabs = await ext.tabs.query({ windowId: wid });
+    const keeper = findKeeperTab(tabs, wid);
+    keeperTabByWindow.delete(wid);
+    if (keeper) {
+        await ext.tabs.remove(keeper.id).catch(() => {});
+    }
+}
+
+function getUserTabs(tabs, keeper) {
+    if (!keeper) return tabs;
+    return tabs.filter((tab) => tab.id !== keeper.id);
+}
+
+async function syncNamedWindowTabs(windowId) {
+    const wid = normalizeWindowId(windowId);
+    if (!wid || isInitializing || isResetting) return;
+
+    if (!namedWindowIds.has(wid)) {
+        await removeKeeperTab(wid);
+        return;
+    }
+
+    const win = await ext.windows.get(wid, { populate: true }).catch(() => null);
+    if (!win || win.type !== "normal") return;
+
+    const tabs = win.tabs ?? [];
+    const keeper = findKeeperTab(tabs, wid);
+    const userTabs = getUserTabs(tabs, keeper);
+
+    // 只剩 keeper：自动打开普通新标签页
+    if (userTabs.length === 0 && keeper) {
+        await ext.tabs.create({ windowId: wid, active: true });
+        return;
+    }
+
+    // 只剩最后一个用户标签：预先插入 pinned 占位（Firefox 不统计 hidden 标签，必须可见）
+    if (userTabs.length === 1 && !keeper) {
+        const created = await createPinnedKeeperTab(wid);
+        const userTab = userTabs[0];
+        if (userTab && userTab.id !== created.id) {
+            await ext.tabs.update(userTab.id, { active: true }).catch(() => {});
+        }
+        return;
+    }
+
+    // 已命名窗口保留占位标签，不因新开标签而移除
+
+    // 避免焦点落到占位标签
+    if (keeper?.active && userTabs.length > 0) {
+        const activeUser = userTabs.find((tab) => tab.active) ?? userTabs[userTabs.length - 1];
+        if (activeUser) {
+            await ext.tabs.update(activeUser.id, { active: true }).catch(() => {});
+        }
+    }
+}
+
+function scheduleNamedWindowSync(windowId) {
+    const wid = normalizeWindowId(windowId);
+    if (!wid || isInitializing || isResetting) return;
+    syncPendingWindowIds.add(wid);
+    if (syncFlushScheduled) return;
+    syncFlushScheduled = true;
+    queueMicrotask(async () => {
+        syncFlushScheduled = false;
+        const windowIds = [...syncPendingWindowIds];
+        syncPendingWindowIds.clear();
+        for (const id of windowIds) {
+            try {
+                await syncNamedWindowTabs(id);
+            } catch (err) {
+                console.warn("syncNamedWindowTabs failed", err);
+            }
+        }
+    });
+}
+
+async function syncAllNamedWindows() {
+    for (const wid of namedWindowIds) {
+        try {
+            await syncNamedWindowTabs(wid);
+        } catch (err) {
+            console.warn("syncNamedWindowTabs failed", err);
+        }
+    }
 }
 
 async function getAllWindowNames() {
@@ -157,6 +305,11 @@ function normalizeWindowId(windowId) {
     return Number.isFinite(id) && id > 0 ? id : 0;
 }
 
+function isKeeperLikeTab(tab) {
+    if (tab.url !== KEEPER_TAB_URL) return false;
+    return tab.pinned || tab.hidden;
+}
+
 function isStaleExtensionTab(tab) {
     const url = tab.url;
     if (typeof url !== "string") return false;
@@ -164,6 +317,7 @@ function isStaleExtensionTab(tab) {
         return false;
     }
     return url.endsWith(LABEL_TAB_SUFFIX)
+        || url.endsWith(HOLD_TAB_SUFFIX)
         || url.endsWith("/workspace.html")
         || url.endsWith("/anchor.html");
 }
@@ -214,15 +368,50 @@ async function removeStaleLabelTabs() {
     }
 }
 
-async function resetExtensionUi() {
+async function removeAllKeeperTabs() {
+    keeperTabByWindow.clear();
+    const tabs = await ext.tabs.query({});
+    const removeIds = tabs.filter(isKeeperLikeTab).map((tab) => tab.id);
+    if (removeIds.length > 0) {
+        await ext.tabs.remove(removeIds);
+    }
+}
+
+async function cleanupOrphanWindowNames() {
+    const all = await ext.storage.local.get(null);
+    const windows = await ext.windows.getAll();
+    const liveIds = new Set(windows.map((w) => w.id));
+    const keysToRemove = [];
+    for (const key of Object.keys(all)) {
+        if (!key.startsWith(WINNAME_PREFIX)) continue;
+        const id = parseInt(key.slice(WINNAME_PREFIX.length), 10);
+        if (!liveIds.has(id)) {
+            keysToRemove.push(key);
+            namedWindowIds.delete(id);
+        }
+    }
+    if (keysToRemove.length > 0) {
+        await ext.storage.local.remove(keysToRemove);
+    }
+}
+
+async function cleanupExtensionState() {
     isResetting = true;
     try {
         await removeStaleLabelTabs();
+        await removeAllKeeperTabs();
+        await cleanupOrphanWindowNames();
         popupTargetWindowIdMemory = null;
         await ext.storage.session.clear();
     } finally {
         isResetting = false;
     }
+}
+
+async function rebuildNamedWindowState() {
+    await refreshNamedWindowCache();
+    await syncAllNamedWindows();
+    await ensureAllActionLabels();
 }
 
 async function ensureAllActionLabels() {
@@ -238,8 +427,8 @@ async function doInit() {
     isInitializing = true;
     try {
         buildContextMenu();
-        await resetExtensionUi();
-        await ensureAllActionLabels();
+        await cleanupExtensionState();
+        await rebuildNamedWindowState();
     } finally {
         isInitializing = false;
     }
@@ -332,10 +521,29 @@ ext.windows.onCreated.addListener(async (win) => {
     updateSendTabSubmenu();
 });
 
+function onNamedWindowTabEvent(windowId) {
+    if (isInitializing || isResetting) return;
+    scheduleNamedWindowSync(windowId);
+}
+
 ext.windows.onRemoved.addListener(async (windowId) => {
     const wid = normalizeWindowId(windowId);
     removeWindowName(wid);
+    keeperTabByWindow.delete(wid);
     updateSendTabSubmenu();
+});
+
+ext.tabs.onCreated.addListener((tab) => {
+    onNamedWindowTabEvent(tab.windowId);
+});
+
+ext.tabs.onRemoved.addListener((_tabId, removeInfo) => {
+    if (isInitializing || isResetting || removeInfo.isWindowClosing) return;
+    onNamedWindowTabEvent(removeInfo.windowId);
+});
+
+ext.tabs.onMoved.addListener((_tabId, moveInfo) => {
+    onNamedWindowTabEvent(moveInfo.windowId);
 });
 
 ext.tabs.onActivated.addListener(async ({ windowId }) => {
@@ -346,11 +554,14 @@ ext.tabs.onActivated.addListener(async ({ windowId }) => {
 
 ext.tabs.onAttached.addListener(async (_tabId, attachInfo) => {
     if (isInitializing || isResetting || !attachInfo.newWindowId) return;
+    onNamedWindowTabEvent(attachInfo.newWindowId);
     await updateActionLabel(attachInfo.newWindowId);
     updateSendTabSubmenu();
 });
 
-ext.tabs.onDetached.addListener(() => {
+ext.tabs.onDetached.addListener((_tabId, detachInfo) => {
+    if (isInitializing || isResetting) return;
+    onNamedWindowTabEvent(detachInfo.oldWindowId);
     updateSendTabSubmenu();
 });
 
@@ -478,6 +689,19 @@ ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
                     await updateActionLabel(win.id);
                 }
                 sendResponse({ windowId: win.id });
+            })();
+            return true;
+        }
+        case "eon-cleanupExtension": {
+            (async () => {
+                try {
+                    await cleanupExtensionState();
+                    await rebuildNamedWindowState();
+                    sendResponse({ ok: true });
+                } catch (err) {
+                    console.error("eon-cleanupExtension failed", err);
+                    sendResponse({ ok: false, error: String(err) });
+                }
             })();
             return true;
         }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Eon Workspace",
-  "version": "0.3.1",
-  "description": "Window Manager: Name windows, switch windows, move tabs between windows.",
+  "version": "0.4.1",
+  "description": "受 Winger 启发的轻量多窗口管理：命名、切换、发送标签；已命名窗口关最后标签不消失。Inspired by Winger, trimmed essentials.",
   "icons": {
     "16": "icon.svg",
     "32": "icon.svg",
@@ -18,7 +18,7 @@
     "scripts": ["background.js"]
   },
   "action": {
-    "default_title": "Eon Workspace",
+    "default_title": "Eon Workspace — 窗口管理",
     "default_popup": "popup.html",
     "default_area": "tabstrip",
     "default_icon": {
@@ -32,32 +32,35 @@
       "suggested_key": {
         "default": "F1"
       },
-      "description": "Open Eon Workspace popup"
+      "description": "打开 Eon Workspace 面板 / Open popup"
     },
     "switch-next": {
       "suggested_key": {
         "default": "Alt+Q"
       },
-      "description": "Switch to next window"
+      "description": "切换到下一个窗口 / Switch to next window"
     },
     "switch-previous": {
       "suggested_key": {
         "default": "Shift+Alt+Q"
       },
-      "description": "Switch to previous window"
+      "description": "切换到上一个窗口 / Switch to previous window"
     },
     "send-tab": {
       "suggested_key": {
         "default": "Alt+T",
         "mac": "Alt+T"
       },
-      "description": "Send tab to window (/send)"
+      "description": "发送标签到窗口 /send / Send tab to window"
     }
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "eon-workspace@illidan127",
-      "strict_min_version": "109.0"
+      "id": "eon-workspace@illidan412",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
   }
 }
