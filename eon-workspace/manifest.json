@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Eon Workspace",
-  "version": "0.4.1",
+  "version": "1.0.0",
   "description": "受 Winger 启发的轻量多窗口管理：命名、切换、发送标签；已命名窗口关最后标签不消失。Inspired by Winger, trimmed essentials.",
   "icons": {
     "16": "icon.svg",
