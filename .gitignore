@@ -1,2 +1,3 @@
 /.agent-shell/
 dist/
+.DS_Store
